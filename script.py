@@ -1,4 +1,5 @@
-import json
+from json import loads as loadToDict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from requests import get
 from hacker_news_generated_data.models import News
@@ -7,21 +8,24 @@ HN_URL = "https://hacker-news.firebaseio.com"
 
 endpoints = [
     "/v0/newstories.json",
-    # "/v0/topstories.json",
-    # "/v0/beststories.json",
-    # "/v0/askstories.json",
-    # "/v0/showstories.json",
-    # "/v0/jobstories.json",
+    "/v0/topstories.json",
+    "/v0/beststories.json",
+    "/v0/askstories.json",
+    "/v0/showstories.json",
+    "/v0/jobstories.json",
 ]
 
 def sync_to_DB(data: dict):
     data["time"] = datetime.fromtimestamp(data["time"])
-    news = News(*data)
-    news.save()
+    try:
+        news = News(**data)
+        news.save()
+    except Exception as e:
+        pass
 
-def story(id: int) -> dict:
+def story(id) -> dict:
     response = get(f"{HN_URL}/v0/item/{id}.json")
-    data = json.loads(response.text)
+    data = loadToDict(response.text)
     return data
 
 def getStories(endpoint: str) -> list:
@@ -29,5 +33,11 @@ def getStories(endpoint: str) -> list:
     data = str(response.text)[1:-2].split(",")
     return data
 
-for i in getStories("/v0/newstories.json")[0:1]:
-    sync_to_DB(story(int(i)))
+def runFunc():
+    thread = []
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for endpoint in endpoints:
+            for i in getStories(endpoint):
+                thread.append(executor.submit(sync_to_DB, story(i)))
+
+runFunc()
