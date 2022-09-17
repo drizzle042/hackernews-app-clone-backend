@@ -15,13 +15,15 @@ endpoints = [
     "/v0/jobstories.json",
 ]
 
-def sync_to_DB(data: dict):
-    data["time"] = datetime.fromtimestamp(data["time"])
-    try:
-        news = News(**data)
-        news.save()
-    except Exception as e:
-        pass
+def sync_to_DB(story, getStories):
+    for i in getStories:
+        data = story(i)
+        data["time"] = datetime.fromtimestamp(data["time"])
+        try:
+            news = News(**data)
+            news.save()
+        except Exception as e:
+            pass
 
 def story(id) -> dict:
     response = get(f"{HN_URL}/v0/item/{id}.json")
@@ -34,10 +36,8 @@ def getStories(endpoint: str) -> list:
     return data
 
 def runFunc():
-    thread = []
     with ThreadPoolExecutor(max_workers=20) as executor:
         for endpoint in endpoints:
-            for i in getStories(endpoint):
-                thread.append(executor.submit(sync_to_DB, story(i)))
+            executor.submit(sync_to_DB, story, getStories(endpoint))
 
 runFunc()
