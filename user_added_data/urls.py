@@ -15,8 +15,9 @@ Including another URLconf
 """
 
 from django.urls import path
-from user_added_data.views import AllData
+from user_added_data.views import AllArticles, Comments
 
 urlpatterns = [
-    path("api/v0/alldata/", AllData.as_view(), name="alldata"),
+    path("api/v0/articles/", AllArticles.as_view(), name="allarticles"),
+    path("api/v0/comments/", Comments.as_view(), name="comments"),
 ]
