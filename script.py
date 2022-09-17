@@ -19,6 +19,7 @@ def sync_to_DB(story, getStories):
     for i in getStories:
         data = story(i)
         data["time"] = datetime.fromtimestamp(data["time"])
+        data["type"] = "ask" if str(data["title"]).startswith("Ask HN:") else data["type"]
         try:
             news = News(**data)
             news.save()
