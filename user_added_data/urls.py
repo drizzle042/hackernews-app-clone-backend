@@ -15,9 +15,10 @@ Including another URLconf
 """
 
 from django.urls import path
-from user_added_data.views import AllArticles, Comments
+from user_added_data.views import AllArticles, Comments, Account
 
 urlpatterns = [
     path("api/v0/articles/", AllArticles.as_view(), name="allarticles"),
     path("api/v0/comments/", Comments.as_view(), name="comments"),
+    path("api/v0/account/", Account.as_view(), name="account"),
 ]

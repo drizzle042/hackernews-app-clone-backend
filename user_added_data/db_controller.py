@@ -51,9 +51,15 @@ class Queries():
     def comments(id):
 
         def story(commentID) -> dict:
-            response = get(f"{HN_URL}/v0/item/{commentID}.json")
-            data = json.loads(response.text)
-            return data
+
+            try:
+                response = get(f"{HN_URL}/v0/item/{commentID}.json")
+                data = json.loads(response.text)
+                return data
+
+            except:
+                raise ConnectionError
+
 
         parentComment = story(id)
 
@@ -62,7 +68,11 @@ class Queries():
             data.append(story(commentID))
 
         with ThreadPoolExecutor(max_workers=20) as executor:
-            for commentID in parentComment["kids"]:
-                executor.submit(getComments, commentID)
+            try:
+                for commentID in parentComment["kids"]:
+                    executor.submit(getComments, commentID)
 
-        return parentComment, data
+                return parentComment, data
+
+            except KeyError:
+                return parentComment, data
