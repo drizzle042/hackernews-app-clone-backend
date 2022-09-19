@@ -13,8 +13,8 @@ class NewsBaseClass(models.Model):
     dead = models.BooleanField(blank=True, default=False, null=True)
     parent = models.IntegerField(unique=True, blank=True, null=True)
     poll = models.IntegerField(unique=True, blank=True, null=True)
-    url = models.URLField(blank=True, unique=True, null=True)
-    score = models.IntegerField(blank=True, null=True)
+    url = models.URLField(blank=True, null=True)
+    score = models.IntegerField(blank=True, null=True, default=0)
     descendants = models.IntegerField(blank=True, null=True)
     kids = models.TextField(blank=True, null=True)
 

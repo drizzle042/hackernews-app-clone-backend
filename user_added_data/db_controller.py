@@ -1,16 +1,22 @@
+from datetime import datetime, timedelta
 import json
+import jwt
+from django.db.utils import IntegrityError
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
+from django.conf import settings
 from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers import serialize
 from requests import get
 from hacker_news_generated_data.models import News
+from user_added_data.models import User, UserPosts
 
 HN_URL = "https://hacker-news.firebaseio.com"
 
 class Queries():
 
-    def allArticles(paginate=10, page=1, **kwargs):
+    def articles(paginate=10, page=1, **kwargs):
 
         def queryset(type, keyword):
             if type != "all" and keyword != "null":
@@ -76,3 +82,112 @@ class Queries():
 
             except KeyError:
                 return parentComment, data
+
+
+class AccountControl():      
+
+    def get_user(data: dict):
+
+        queryset = User.objects.filter(**data)
+
+        if len(queryset) != 0:
+            return queryset
+        else:
+            raise ObjectDoesNotExist
+
+            
+    def get_user_model_object(data: dict):
+
+        try:
+            queryset = User.objects.get(**data)
+            return queryset
+
+        except ObjectDoesNotExist:
+            raise ObjectDoesNotExist
+
+
+    def createAccount(account_data: dict) -> str:
+
+        try:
+            user = User(**account_data)
+            user.save()
+        except IntegrityError:
+            raise IntegrityError
+
+        key = settings.SECRET_KEY
+
+        expiration_time = datetime.utcnow() + timedelta(hours=8)
+        auth_data = {
+            "email": account_data["email"],
+            "password": account_data["password"],
+            "exp": expiration_time
+        }
+        auth_token = jwt.encode(payload=auth_data, key=key)
+
+        return auth_token
+
+
+    def updateAccount(email: str, password: str, data: dict):
+
+        queryset = User.objects.filter(email=email, password=password)
+
+        try:
+            if len(queryset) != 0:
+                queryset.update(**data)
+            else:
+                raise ObjectDoesNotExist
+                
+        except IntegrityError:
+            raise IntegrityError  
+
+        
+class UserRelatedQueries():
+
+    def get_user_posts(paginate=10, page=1, **kwargs):
+
+        def queryset(user):
+            queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(by = user)
+            for query in queryset:
+                query.time = datetime.timestamp(query.time)
+
+            return queryset
+
+        user = kwargs["user"]
+        paginator = Paginator(queryset(user=user), paginate)
+
+        data = serialize(
+            "json",
+            paginator.page(page).object_list, 
+            fields=(
+                "title", 
+                "type", 
+                "by", 
+                "time", 
+                "text", 
+                "parent", 
+                "poll",
+                "url",
+                "score",
+                "kids"
+            ))
+
+        return data, paginator        
+
+    
+    def create_user_post(data: dict):
+        
+        post = UserPosts(**data)
+        post.save()
+
+
+    def delete_user_post(**kwargs):
+
+        user = kwargs["user"]
+        post_to_delete = kwargs["post_to_delete"]
+
+        try:
+            queryset = UserPosts.objects.get(by=user, id=post_to_delete)
+            queryset.delete()
+        except ObjectDoesNotExist:
+            raise ObjectDoesNotExist
+

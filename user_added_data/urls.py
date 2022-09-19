@@ -15,10 +15,12 @@ Including another URLconf
 """
 
 from django.urls import path
-from user_added_data.views import AllArticles, Comments, Account
+from user_added_data.views import AllArticles, Comments, Account, SignIn, UserRelatedActivities
 
 urlpatterns = [
+    path("api/v0/account/", Account.as_view(), name="account"),
     path("api/v0/articles/", AllArticles.as_view(), name="allarticles"),
     path("api/v0/comments/", Comments.as_view(), name="comments"),
-    path("api/v0/account/", Account.as_view(), name="account"),
+    path("api/v0/myarticles/", UserRelatedActivities.as_view(), name="user-related-activities"),
+    path("api/v0/signin/", SignIn.as_view(), name="signin"),
 ]
