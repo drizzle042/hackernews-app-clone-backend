@@ -8,7 +8,9 @@ from hacker_news_generated_data.models import NewsBaseClass
 
 def createID():
     id = uuid1().int >> 64
-    return abs(id)
+    id = id / 2.5
+    return abs(int(id))
+
 
 class User(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True, default=createID)

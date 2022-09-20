@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 import jwt
+from itertools import chain
 from django.db.utils import IntegrityError
 from concurrent.futures import ThreadPoolExecutor
 from django.core.paginator import Paginator
@@ -20,16 +21,51 @@ class Queries():
 
         def queryset(type, keyword):
             if type != "all" and keyword != "null":
-                queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type), Q(title__icontains = keyword) | Q(text__icontains = keyword) | Q(by__icontains = keyword))
+                hacker_news_queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type), Q(title__icontains = keyword) | Q(text__icontains = keyword) | Q(by__icontains = keyword))
+                user_posts_queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type), Q(title__icontains = keyword) | Q(text__icontains = keyword))
+
+                queryset = chain(hacker_news_queryset, user_posts_queryset)
+                queryset = sorted(
+                    queryset,
+                    key=lambda i: i.time,
+                    reverse=True
+                )
                 return queryset
+
             elif type == "all" and keyword != "null":
-                queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(title__icontains = keyword) | Q(text__icontains = keyword) | Q(by__icontains = keyword))
+                hacker_news_queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(title__icontains = keyword) | Q(text__icontains = keyword) | Q(by__icontains = keyword))
+                user_posts_queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(title__icontains = keyword) | Q(text__icontains = keyword))
+
+                queryset = chain(hacker_news_queryset, user_posts_queryset)
+                queryset = sorted(
+                    queryset,
+                    key=lambda i: i.time,
+                    reverse=True
+                )
                 return queryset
+
             elif type != "all" and keyword == "null":
-                queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type))
+                hacker_news_queryset = News.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type))
+                user_posts_queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(type__icontains = type))
+
+                queryset = chain(hacker_news_queryset, user_posts_queryset)
+                queryset = sorted(
+                    queryset,
+                    key=lambda i: i.time,
+                    reverse=True
+                )
                 return queryset
+
             elif type == "all" and keyword == "null":
-                queryset = News.objects.order_by("-time").exclude(type__icontains="comment")
+                hacker_news_queryset = News.objects.order_by("-time").exclude(type__icontains="comment")
+                user_posts_queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment")
+
+                queryset = chain(hacker_news_queryset, user_posts_queryset)
+                queryset = sorted(
+                    queryset,
+                    key=lambda i: i.time,
+                    reverse=True
+                )
                 return queryset
 
         article_type = str(kwargs["type"]).lower()
@@ -145,15 +181,27 @@ class UserRelatedQueries():
 
     def get_user_posts(paginate=10, page=1, **kwargs):
 
-        def queryset(user):
-            queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(by = user)
-            for query in queryset:
-                query.time = datetime.timestamp(query.time)
-
-            return queryset
+        def queryset(user, type, keyword):
+            
+            if type != "all" and keyword != "null":
+                queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(by = user), Q(type__icontains = type), Q(title__icontains = keyword) | Q(text__icontains = keyword))
+                return queryset
+            elif type == "all" and keyword != "null":
+                queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(by = user), Q(title__icontains = keyword) | Q(text__icontains = keyword))
+                return queryset
+            elif type != "all" and keyword == "null":
+                queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(by = user), Q(type__icontains = type))
+                return queryset
+            elif type == "all" and keyword == "null":
+                queryset = UserPosts.objects.order_by("-time").exclude(type__icontains="comment").filter(Q(by = user))
+                return queryset
+                
 
         user = kwargs["user"]
-        paginator = Paginator(queryset(user=user), paginate)
+        type = str(kwargs["type"]).lower()
+        keyword = str(kwargs["keyword"]).lower()
+
+        paginator = Paginator(queryset(user=user, type=type, keyword=keyword), paginate)
 
         data = serialize(
             "json",
@@ -164,8 +212,6 @@ class UserRelatedQueries():
                 "by", 
                 "time", 
                 "text", 
-                "parent", 
-                "poll",
                 "url",
                 "score",
                 "kids"

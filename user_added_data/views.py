@@ -251,7 +251,7 @@ class Account(View):
 
             response = JsonResponse({
                 "status": "Success",
-                "message": "Account updated"
+                "message": "Account updated successfully. To continue using the app, please signin."
             })
 
             return response
@@ -315,7 +315,7 @@ class SignIn(View):
 
             return JsonResponse({
                 "authToken": auth_token,
-                "message": "Account was successfully created",
+                "message": "You have been signed in successfully",
                 "status": "Success"
             })
 
@@ -337,9 +337,6 @@ class UserRelatedActivities(View):
         
         # Params
         request_header = request.headers
-        params = request.GET
-        page = params.get("page") if params.get("page") else  1
-        paginate = params.get("limit") if params.get("limit") else  10
         
         token = str(request_header["authorization"]).split()[1]
         decoded_token = Account().decode_auth_token(token=token)
@@ -367,8 +364,15 @@ class UserRelatedActivities(View):
 
             return response
 
+        # Params
+        params = request.GET
+        page = params.get("page") if params.get("page") else  1
+        paginate = params.get("limit") if params.get("limit") else  10
+        article_type = params.get("type") if params.get("type") else  "all"
+        keyword = params.get("keyword") if params.get("keyword") else "null"
+
         # Query
-        query = UserRelatedQueries.get_user_posts(paginate = paginate, page = page, user=user)
+        query = UserRelatedQueries.get_user_posts(paginate = paginate, page = page, user=user, type = article_type, keyword = keyword)
         
         # Payload
         payload["totalDocs"] = query[1].count
