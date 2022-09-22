@@ -45,7 +45,7 @@ def runFunc():
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('interval', hour=4)
+@sched.scheduled_job('interval', minutes=5)
 def timed_job():
     runFunc()
 
