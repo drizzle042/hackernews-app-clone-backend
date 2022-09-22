@@ -1,6 +1,7 @@
 from json import loads as loadToDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from apscheduler.schedulers.blocking import BlockingScheduler
 from requests import get
 from hacker_news_generated_data.models import News
 
@@ -42,4 +43,10 @@ def runFunc():
         for endpoint in endpoints:
             executor.submit(sync_to_DB, story, getStories(endpoint))
 
-runFunc()
+sched = BlockingScheduler()
+
+@sched.scheduled_job('interval', hour=4)
+def timed_job():
+    runFunc()
+
+sched.start()
